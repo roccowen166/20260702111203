@@ -57,20 +57,90 @@
           </template>
         </el-table-column>
       </el-table>
+
+      <div class="flex justify-end mt-4">
+        <el-pagination
+          v-model:current-page="pagination.page"
+          v-model:page-size="pagination.pageSize"
+          :total="pagination.total"
+          :page-sizes="[10, 20, 50]"
+          layout="total, sizes, prev, pager, next"
+          @size-change="loadData"
+          @current-change="loadData"
+        />
+      </div>
     </el-card>
+
+    <!-- 新建/编辑对话框 -->
+    <el-dialog
+      v-model="dialogVisible"
+      :title="isEdit ? '编辑问题' : '新建问题'"
+      width="600px"
+      @closed="resetForm"
+    >
+      <el-form ref="formRef" :model="form" :rules="rules" label-width="90px">
+        <el-form-item label="项目" prop="project_id">
+          <el-select v-model="form.project_id" placeholder="请选择项目" style="width: 100%">
+            <el-option v-for="p in projects" :key="p.id" :label="p.name" :value="p.id" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="标题" prop="title">
+          <el-input v-model="form.title" placeholder="请输入问题标题" maxlength="200" show-word-limit />
+        </el-form-item>
+        <el-form-item label="严重程度" prop="severity">
+          <el-select v-model="form.severity" style="width: 100%">
+            <el-option label="低" value="low" />
+            <el-option label="中" value="medium" />
+            <el-option label="高" value="high" />
+            <el-option label="严重" value="critical" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="状态" prop="status">
+          <el-select v-model="form.status" style="width: 100%">
+            <el-option label="待处理" value="open" />
+            <el-option label="处理中" value="in_progress" />
+            <el-option label="已解决" value="resolved" />
+            <el-option label="已关闭" value="closed" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="报告人" prop="reporter">
+          <el-input v-model="form.reporter" placeholder="请输入报告人" />
+        </el-form-item>
+        <el-form-item label="负责人" prop="assignee">
+          <el-input v-model="form.assignee" placeholder="请输入负责人" />
+        </el-form-item>
+        <el-form-item label="描述" prop="description">
+          <el-input
+            v-model="form.description"
+            type="textarea"
+            :rows="4"
+            placeholder="请输入问题描述"
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="dialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="submitting" @click="handleSubmit">确定</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { Plus } from '@element-plus/icons-vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
 import { issueApi, type Issue } from '@/api/issue'
 import { projectApi, type Project } from '@/api/project'
 
 const issues = ref<Issue[]>([])
 const projects = ref<Project[]>([])
 const loading = ref(false)
+const submitting = ref(false)
+const dialogVisible = ref(false)
+const isEdit = ref(false)
+const editingId = ref<number | null>(null)
+const formRef = ref<FormInstance>()
 
 const filters = reactive({
   projectId: undefined as number | undefined,
@@ -78,11 +148,39 @@ const filters = reactive({
   severity: '',
 })
 
+const pagination = reactive({
+  page: 1,
+  pageSize: 20,
+  total: 0,
+})
+
+const form = reactive({
+  project_id: undefined as number | undefined,
+  title: '',
+  description: '',
+  severity: 'medium',
+  status: 'open',
+  reporter: '',
+  assignee: '',
+})
+
+const rules: FormRules = {
+  project_id: [{ required: true, message: '请选择项目', trigger: 'change' }],
+  title: [{ required: true, message: '请输入问题标题', trigger: 'blur' }],
+  severity: [{ required: true, message: '请选择严重程度', trigger: 'change' }],
+  status: [{ required: true, message: '请选择状态', trigger: 'change' }],
+}
+
 async function loadData() {
   loading.value = true
   try {
-    const res = await issueApi.list(filters)
+    const res = await issueApi.list({
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+      ...filters,
+    })
     issues.value = res.items || res
+    pagination.total = res.total ?? (res.items || res).length
   } finally {
     loading.value = false
   }
@@ -113,12 +211,71 @@ function statusLabel(s: string) {
   return map[s] || s
 }
 
-function handleCreate() {
-  ElMessage.info('新建问题功能开发中...')
+function resetForm() {
+  formRef.value?.resetFields()
+  form.project_id = undefined
+  form.title = ''
+  form.description = ''
+  form.severity = 'medium'
+  form.status = 'open'
+  form.reporter = ''
+  form.assignee = ''
+  isEdit.value = false
+  editingId.value = null
 }
 
-function handleEdit(_row: Issue) {
-  ElMessage.info('编辑功能开发中...')
+function handleCreate() {
+  resetForm()
+  if (filters.projectId) {
+    form.project_id = filters.projectId
+  }
+  dialogVisible.value = true
+}
+
+function handleEdit(row: Issue) {
+  resetForm()
+  isEdit.value = true
+  editingId.value = row.id
+  form.project_id = row.project_id
+  form.title = row.title
+  form.description = row.description || ''
+  form.severity = row.severity
+  form.status = row.status
+  form.reporter = row.reporter || ''
+  form.assignee = row.assignee || ''
+  dialogVisible.value = true
+}
+
+async function handleSubmit() {
+  if (!formRef.value) return
+  await formRef.value.validate(async (valid) => {
+    if (!valid) return
+    submitting.value = true
+    try {
+      const payload = {
+        project_id: form.project_id!,
+        title: form.title,
+        description: form.description,
+        severity: form.severity,
+        status: form.status,
+        reporter: form.reporter,
+        assignee: form.assignee,
+      }
+      if (isEdit.value && editingId.value) {
+        await issueApi.update(editingId.value, payload)
+        ElMessage.success('更新成功')
+      } else {
+        await issueApi.create(payload)
+        ElMessage.success('创建成功')
+      }
+      dialogVisible.value = false
+      loadData()
+    } catch (err: any) {
+      ElMessage.error(err?.response?.data?.detail || '操作失败')
+    } finally {
+      submitting.value = false
+    }
+  })
 }
 
 async function handleDelete(row: Issue) {
