@@ -24,19 +24,68 @@
         </el-table-column>
       </el-table>
     </el-card>
+
+    <!-- 新建/编辑对话框 -->
+    <el-dialog
+      v-model="dialogVisible"
+      :title="isEdit ? '编辑项目' : '新建项目'"
+      width="560px"
+      @closed="resetForm"
+    >
+      <el-form ref="formRef" :model="form" :rules="rules" label-width="80px">
+        <el-form-item label="项目名称" prop="name">
+          <el-input v-model="form.name" placeholder="请输入项目名称" maxlength="200" show-word-limit />
+        </el-form-item>
+        <el-form-item label="状态" prop="status">
+          <el-select v-model="form.status" style="width: 100%">
+            <el-option label="进行中" value="active" />
+            <el-option label="草稿" value="draft" />
+            <el-option label="已归档" value="archived" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="描述" prop="description">
+          <el-input
+            v-model="form.description"
+            type="textarea"
+            :rows="4"
+            placeholder="请输入项目描述"
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="dialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="submitting" @click="handleSubmit">确定</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { Plus } from '@element-plus/icons-vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
 import { projectApi, type Project } from '@/api/project'
 
 const router = useRouter()
 const projects = ref<Project[]>([])
 const loading = ref(false)
+const submitting = ref(false)
+const dialogVisible = ref(false)
+const isEdit = ref(false)
+const editingId = ref<number | null>(null)
+const formRef = ref<FormInstance>()
+
+const form = reactive({
+  name: '',
+  description: '',
+  status: 'active',
+})
+
+const rules: FormRules = {
+  name: [{ required: true, message: '请输入项目名称', trigger: 'blur' }],
+  status: [{ required: true, message: '请选择状态', trigger: 'change' }],
+}
 
 async function loadData() {
   loading.value = true
@@ -62,12 +111,56 @@ function goDetail(id: number) {
   router.push(`/projects/${id}`)
 }
 
-function handleCreate() {
-  ElMessage.info('新建项目功能开发中...')
+function resetForm() {
+  formRef.value?.resetFields()
+  form.name = ''
+  form.description = ''
+  form.status = 'active'
+  isEdit.value = false
+  editingId.value = null
 }
 
-function handleEdit(_row: Project) {
-  ElMessage.info('编辑功能开发中...')
+function handleCreate() {
+  resetForm()
+  dialogVisible.value = true
+}
+
+function handleEdit(row: Project) {
+  resetForm()
+  isEdit.value = true
+  editingId.value = row.id
+  form.name = row.name
+  form.description = row.description || ''
+  form.status = row.status
+  dialogVisible.value = true
+}
+
+async function handleSubmit() {
+  if (!formRef.value) return
+  await formRef.value.validate(async (valid) => {
+    if (!valid) return
+    submitting.value = true
+    try {
+      const payload = {
+        name: form.name,
+        description: form.description,
+        status: form.status,
+      }
+      if (isEdit.value && editingId.value) {
+        await projectApi.update(editingId.value, payload)
+        ElMessage.success('更新成功')
+      } else {
+        await projectApi.create(payload)
+        ElMessage.success('创建成功')
+      }
+      dialogVisible.value = false
+      loadData()
+    } catch (err: any) {
+      ElMessage.error(err?.response?.data?.detail || '操作失败')
+    } finally {
+      submitting.value = false
+    }
+  })
 }
 
 async function handleDelete(row: Project) {
