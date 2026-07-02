@@ -67,7 +67,8 @@ async function exportIssues() {
   exporting.value = 'issues'
   try {
     const blob = await reportApi.exportIssues(filters)
-    downloadBlob(blob as unknown as Blob, `问题记录报表_${Date.now()}.xlsx`)
+    const projectName = projects.value.find(p => p.id === filters.projectId)?.name || '全部项目'
+    downloadBlob(blob as unknown as Blob, `问题记录报表_${projectName}_${Date.now()}.xlsx`)
     ElMessage.success('导出成功')
   } finally {
     exporting.value = ''
@@ -78,7 +79,8 @@ async function exportTestCases() {
   exporting.value = 'cases'
   try {
     const blob = await reportApi.exportTestCases(filters)
-    downloadBlob(blob as unknown as Blob, `测试用例报表_${Date.now()}.xlsx`)
+    const projectName = projects.value.find(p => p.id === filters.projectId)?.name || '全部项目'
+    downloadBlob(blob as unknown as Blob, `测试用例报表_${projectName}_${Date.now()}.xlsx`)
     ElMessage.success('导出成功')
   } finally {
     exporting.value = ''
@@ -89,7 +91,8 @@ async function exportAll() {
   exporting.value = 'all'
   try {
     const blob = await reportApi.exportAll(filters)
-    downloadBlob(blob as unknown as Blob, `汇总报表_${Date.now()}.xlsx`)
+    const projectName = projects.value.find(p => p.id === filters.projectId)?.name || '全部项目'
+    downloadBlob(blob as unknown as Blob, `汇总报表_${projectName}_${Date.now()}.xlsx`)
     ElMessage.success('导出成功')
   } finally {
     exporting.value = ''
