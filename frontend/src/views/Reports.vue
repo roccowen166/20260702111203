@@ -6,7 +6,7 @@
       <el-card shadow="hover" class="text-center cursor-pointer" @click="exportIssues">
         <el-icon :size="48" color="#f56c6c" class="mb-4"><Warning /></el-icon>
         <h3 class="text-lg font-bold mb-2">问题记录报表</h3>
-        <p class="text-gray-500 text-sm mb-4">导出所有问题记录为 Excel</p>
+        <p class="text-gray-500 text-sm mb-4">按项目分Sheet导出问题记录</p>
         <el-button type="danger" :icon="Download" :loading="exporting === 'issues'">导出 Excel</el-button>
       </el-card>
 

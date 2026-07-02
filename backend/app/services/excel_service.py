@@ -57,32 +57,86 @@ class ExcelService:
             ws.column_dimensions[get_column_letter(col)].width = max_len
 
     @classmethod
-    def generate_issues_report(cls, issues: Sequence[Issue]) -> Workbook:
-        """生成问题记录报表"""
+    def generate_issues_report(cls, issues: Sequence[Issue], projects: dict[int, str] | None = None) -> Workbook:
+        """生成问题记录报表 - 按项目分组，每个项目单独一个Sheet
+
+        Args:
+            issues: 问题记录列表
+            projects: {project_id: project_name} 映射，用于Sheet命名
+        """
+        if projects is None:
+            projects = {}
+
         wb = Workbook()
-        ws = wb.active
-        ws.title = "问题记录"
+        # 删除默认空Sheet
+        default_ws = wb.active
 
-        headers = ["ID", "项目ID", "标题", "描述", "严重程度", "状态", "报告人", "负责人", "创建时间", "更新时间"]
-        ws.append(headers)
-        cls._apply_header_style(ws, 1, len(headers))
+        headers = ["ID", "标题", "描述", "严重程度", "状态", "报告人", "负责人", "创建时间", "更新时间"]
 
+        # 按项目分组
+        grouped: dict[int, list[Issue]] = {}
+        no_project: list[Issue] = []
         for issue in issues:
-            ws.append([
-                issue.id, issue.project_id, issue.title, issue.description,
-                cls.SEVERITY_MAP.get(issue.severity, issue.severity),
-                cls.ISSUE_STATUS_MAP.get(issue.status, issue.status),
-                issue.reporter, issue.assignee,
-                issue.created_at.strftime("%Y-%m-%d %H:%M") if issue.created_at else "",
-                issue.updated_at.strftime("%Y-%m-%d %H:%M") if issue.updated_at else "",
-            ])
+            pid = issue.project_id
+            if pid is not None:
+                grouped.setdefault(pid, []).append(issue)
+            else:
+                no_project.append(issue)
 
-        if len(issues) > 0:
-            cls._apply_cell_style(ws, 2, len(issues) + 1, len(headers))
-        cls._auto_width(ws, len(headers))
+        def _write_sheet(ws, issue_list: list[Issue]):
+            """向Sheet写入问题数据"""
+            ws.append(headers)
+            cls._apply_header_style(ws, 1, len(headers))
 
-        # 冻结首行
-        ws.freeze_panes = "A2"
+            for issue in issue_list:
+                ws.append([
+                    issue.id, issue.title, issue.description,
+                    cls.SEVERITY_MAP.get(issue.severity, issue.severity),
+                    cls.ISSUE_STATUS_MAP.get(issue.status, issue.status),
+                    issue.reporter, issue.assignee,
+                    issue.created_at.strftime("%Y-%m-%d %H:%M") if issue.created_at else "",
+                    issue.updated_at.strftime("%Y-%m-%d %H:%M") if issue.updated_at else "",
+                ])
+
+            if len(issue_list) > 0:
+                cls._apply_cell_style(ws, 2, len(issue_list) + 1, len(headers))
+            cls._auto_width(ws, len(headers))
+            ws.freeze_panes = "A2"
+
+        sheet_created = False
+
+        # 按项目ID排序，每个项目创建一个Sheet
+        for pid in sorted(grouped.keys()):
+            issue_list = grouped[pid]
+            project_name = projects.get(pid, f"项目{pid}")
+            # Sheet名称最多31字符，替换非法字符
+            safe_name = str(project_name).replace('/', '-').replace('\\', '-').replace('?', '-').replace('*', '-').replace('[', '(').replace(']', ')').replace(':', '-')
+            if len(safe_name) > 28:
+                safe_name = safe_name[:28]
+            safe_name = f"{safe_name}({len(issue_list)}条)"
+
+            if not sheet_created:
+                # 第一个项目复用默认Sheet
+                ws = default_ws
+                ws.title = safe_name
+                sheet_created = True
+            else:
+                ws = wb.create_sheet(title=safe_name)
+            _write_sheet(ws, issue_list)
+
+        # 未归类项目的问题
+        if no_project:
+            ws = wb.create_sheet(title="未归类项目")
+            _write_sheet(ws, no_project)
+
+        # 如果没有任何数据，保留一个空Sheet
+        if not sheet_created and not no_project:
+            default_ws.title = "问题记录"
+            default_ws.append(headers)
+            cls._apply_header_style(default_ws, 1, len(headers))
+            cls._auto_width(default_ws, len(headers))
+            default_ws.freeze_panes = "A2"
+
         return wb
 
     @classmethod
@@ -121,9 +175,9 @@ class ExcelService:
         return wb
 
     @classmethod
-    def generate_summary_report(cls, issues: Sequence[Issue], cases: Sequence[TestCase]) -> Workbook:
-        """生成汇总报表（双 Sheet）"""
-        wb = cls.generate_issues_report(issues)
+    def generate_summary_report(cls, issues: Sequence[Issue], cases: Sequence[TestCase], projects: dict[int, str] | None = None) -> Workbook:
+        """生成汇总报表（问题按项目分Sheet + 测试用例Sheet + 统计汇总Sheet）"""
+        wb = cls.generate_issues_report(issues, projects)
 
         # 新增测试用例 Sheet
         ws2 = wb.create_sheet(title="测试用例")
