@@ -60,19 +60,47 @@
 │   ├── requirements.txt
 │   └── .env.example
 │
-├── docker-compose.yml # MySQL 容器
-└── README.md
+├── docker-compose.yml # Docker 一键部署 (MySQL + 后端 + 前端)
+├── README.md
+└── .gitignore
 ```
 
-## 快速开始
+## 部署方式
 
-### 1. 启动 MySQL 数据库
+### 方式一：Docker 一键部署（推荐）
+
+> 前提：已安装 Docker 和 Docker Compose
 
 ```bash
-docker-compose up -d
+# 在项目根目录执行，一键启动所有服务
+docker-compose up -d --build
 ```
 
-### 2. 启动后端
+启动完成后：
+- **前端**: http://localhost (端口 80)
+- **后端 API 文档**: http://localhost:8000/docs
+- **MySQL**: localhost:3306
+
+**默认管理员账号**: `admin@test.com` / `123456`
+
+常用命令：
+```bash
+docker-compose up -d --build      # 构建并后台启动
+docker-compose logs -f backend    # 查看后端日志
+docker-compose logs -f frontend   # 查看前端日志
+docker-compose down               # 停止所有服务
+docker-compose down -v            # 停止并删除数据卷（慎用，会清空数据）
+```
+
+### 方式二：本地开发模式
+
+#### 1. 启动 MySQL 数据库
+
+```bash
+docker-compose up -d mysql
+```
+
+#### 2. 启动后端
 
 ```bash
 cd backend
@@ -83,7 +111,7 @@ cp .env.example .env
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-### 3. 启动前端
+#### 3. 启动前端
 
 ```bash
 cd frontend
@@ -91,7 +119,7 @@ npm install
 npm run dev
 ```
 
-### 4. 访问系统
+#### 4. 访问系统
 
 - 前端: http://localhost:5173
 - 后端 API 文档: http://localhost:8000/docs

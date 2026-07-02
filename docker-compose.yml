@@ -1,6 +1,5 @@
-version: '3.8'
-
 services:
+  # ===== MySQL 数据库 =====
   mysql:
     image: mysql:8.0
     container_name: testflow-mysql
@@ -14,7 +13,66 @@ services:
       - "3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
-    command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot123456"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - testflow-net
+
+  # ===== 后端 API 服务 =====
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: testflow-backend
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_USER: testflow
+      DB_PASSWORD: testflow123
+      DB_NAME: testflow
+      SECRET_KEY: production-secret-key-change-me-in-real-deployment
+      ALGORITHM: HS256
+      ACCESS_TOKEN_EXPIRE_MINUTES: 1440
+      UPLOAD_DIR: /app/app/uploads
+      MAX_FILE_SIZE: 10485760
+      CORS_ORIGINS: http://localhost,http://localhost:5173,http://127.0.0.1
+    ports:
+      - "8000:8000"
+    volumes:
+      - uploads_data:/app/app/uploads
+    networks:
+      - testflow-net
+
+  # ===== 前端 Web 服务 =====
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: testflow-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+    networks:
+      - testflow-net
 
 volumes:
   mysql_data:
+    name: testflow_mysql_data
+  uploads_data:
+    name: testflow_uploads_data
+
+networks:
+  testflow-net:
+    name: testflow-network
+    driver: bridge
