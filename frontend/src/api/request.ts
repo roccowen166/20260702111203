@@ -1,9 +1,9 @@
-import axios, { type AxiosInstance, type InternalAxiosRequestConfig, type AxiosResponse } from 'axios'
+import axios, { type InternalAxiosRequestConfig, type AxiosResponse } from 'axios'
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '@/stores/user'
 import router from '@/router'
 
-const request: AxiosInstance = axios.create({
+const request: any = axios.create({
   baseURL: '/api',
   timeout: 30000,
 })
@@ -17,13 +17,13 @@ request.interceptors.request.use(
     }
     return config
   },
-  (error) => Promise.reject(error)
+  (error: unknown) => Promise.reject(error)
 )
 
 // 响应拦截器
 request.interceptors.response.use(
   (response: AxiosResponse) => response.data,
-  (error) => {
+  (error: any) => {
     if (error.response) {
       const { status, data } = error.response
       const message = data?.detail || data?.message || '请求失败'

@@ -25,7 +25,7 @@ export interface UserCreateParams {
 
 export const authApi = {
   login(data: LoginParams) {
-    return request.post<LoginResult>('/auth/login', data)
+    return request.post('/auth/login', data) as Promise<LoginResult>
   },
 
   register(data: UserCreateParams) {

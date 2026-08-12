@@ -5,25 +5,20 @@
       <el-button type="primary" :icon="Plus" @click="handleCreate">新建项目</el-button>
     </div>
 
-    <el-card shadow="never">
-      <el-table :data="projects" v-loading="loading" stripe>
-        <el-table-column prop="name" label="项目名称" min-width="180" />
-        <el-table-column prop="description" label="描述" min-width="200" show-overflow-tooltip />
-        <el-table-column prop="status" label="状态" width="120">
-          <template #default="{ row }">
-            <el-tag :type="statusType(row.status)">{{ statusLabel(row.status) }}</el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="created_at" label="创建时间" width="180" />
-        <el-table-column label="操作" width="240" fixed="right">
-          <template #default="{ row }">
-            <el-button size="small" @click="goDetail(row.id)">进入</el-button>
-            <el-button size="small" type="primary" @click="handleEdit(row)">编辑</el-button>
-            <el-button size="small" type="danger" @click="handleDelete(row)">删除</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-    </el-card>
+    <div class="metric-grid mb-6">
+      <div class="metric-card"><span>项目总数</span><strong>{{ projects.length }}</strong></div>
+      <div class="metric-card"><span>进行中</span><strong>{{ projects.filter(p => p.status === 'active').length }}</strong></div>
+      <div class="metric-card"><span>已归档</span><strong>{{ projects.filter(p => p.status === 'archived').length }}</strong></div>
+    </div>
+    <div v-loading="loading" class="card-grid">
+      <el-card v-for="row in projects" :key="row.id" class="record-card" shadow="hover">
+        <div class="flex items-start justify-between gap-3 mb-3"><h3 class="text-lg font-semibold truncate">{{ row.name }}</h3><el-tag :type="statusType(row.status)">{{ statusLabel(row.status) }}</el-tag></div>
+        <p class="text-gray-500 text-sm mb-4 line-clamp-2">{{ row.description || '暂无描述' }}</p>
+        <div class="text-xs text-gray-400 mb-4">创建于 {{ row.created_at }}</div>
+        <div class="card-actions"><el-button size="small" @click="goDetail(row.id)">进入</el-button><el-button size="small" type="primary" @click="handleEdit(row)">编辑</el-button><el-button size="small" type="danger" @click="handleDelete(row)">删除</el-button></div>
+      </el-card>
+    </div>
+    <el-empty v-if="!loading && !projects.length" description="暂无项目" />
 
     <!-- 新建/编辑对话框 -->
     <el-dialog
@@ -97,7 +92,7 @@ async function loadData() {
   }
 }
 
-function statusType(status: string) {
+function statusType(status: string): any {
   const map: Record<string, string> = { active: 'success', archived: 'info', draft: 'warning' }
   return map[status] || ''
 }

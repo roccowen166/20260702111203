@@ -34,30 +34,16 @@
       </el-form>
     </el-card>
 
-    <el-card shadow="never">
-      <el-table :data="issues" v-loading="loading" stripe>
-        <el-table-column prop="title" label="标题" min-width="200" show-overflow-tooltip />
-        <el-table-column prop="severity" label="严重程度" width="100">
-          <template #default="{ row }">
-            <el-tag :type="severityType(row.severity)">{{ severityLabel(row.severity) }}</el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="status" label="状态" width="100">
-          <template #default="{ row }">
-            <el-tag :type="statusType(row.status)">{{ statusLabel(row.status) }}</el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="reporter" label="报告人" width="120" />
-        <el-table-column prop="assignee" label="负责人" width="120" />
-        <el-table-column prop="created_at" label="创建时间" width="180" />
-        <el-table-column label="操作" width="180" fixed="right">
-          <template #default="{ row }">
-            <el-button size="small" @click="handleEdit(row)">编辑</el-button>
-            <el-button size="small" type="danger" @click="handleDelete(row)">删除</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-
+    <div v-loading="loading" class="card-grid">
+      <el-card v-for="row in issues" :key="row.id" class="record-card" shadow="hover">
+        <div class="flex items-start justify-between gap-3 mb-3"><h3 class="font-semibold truncate">{{ row.title }}</h3><div class="flex gap-1"><el-tag :type="severityType(row.severity)">{{ severityLabel(row.severity) }}</el-tag><el-tag :type="statusType(row.status)">{{ statusLabel(row.status) }}</el-tag></div></div>
+        <div class="text-sm text-gray-500 line-clamp-2 mb-3">{{ row.description || '暂无描述' }}</div>
+        <div class="grid grid-cols-2 gap-2 text-xs text-gray-500 mb-4"><span>项目：{{ projects.find(p => p.id === row.project_id)?.name || '-' }}</span><span>报告人：{{ row.reporter || '-' }}</span><span>负责人：{{ row.assignee || '-' }}</span><span>{{ row.created_at }}</span></div>
+        <div class="card-actions"><el-button size="small" @click="handleEdit(row)">编辑</el-button><el-button size="small" type="danger" @click="handleDelete(row)">删除</el-button></div>
+      </el-card>
+    </div>
+    <el-empty v-if="!loading && !issues.length" description="暂无问题记录" />
+    <el-card shadow="never" v-if="issues.length">
       <div class="flex justify-end mt-4">
         <el-pagination
           v-model:current-page="pagination.page"
@@ -191,7 +177,7 @@ async function loadProjects() {
   projects.value = res.items || res
 }
 
-function severityType(s: string) {
+function severityType(s: string): any {
   const map: Record<string, string> = { low: 'info', medium: '', high: 'warning', critical: 'danger' }
   return map[s] || ''
 }
@@ -201,7 +187,7 @@ function severityLabel(s: string) {
   return map[s] || s
 }
 
-function statusType(s: string) {
+function statusType(s: string): any {
   const map: Record<string, string> = { open: 'danger', in_progress: 'warning', resolved: 'success', closed: 'info' }
   return map[s] || ''
 }
@@ -256,8 +242,8 @@ async function handleSubmit() {
         project_id: form.project_id!,
         title: form.title,
         description: form.description,
-        severity: form.severity,
-        status: form.status,
+        severity: form.severity as Issue['severity'],
+        status: form.status as Issue['status'],
         reporter: form.reporter,
         assignee: form.assignee,
       }

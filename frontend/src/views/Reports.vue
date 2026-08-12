@@ -2,22 +2,22 @@
   <div class="p-4">
     <h2 class="text-xl font-bold mb-6">报表导出</h2>
 
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-      <el-card shadow="hover" class="text-center cursor-pointer" @click="exportIssues">
+    <div class="card-grid">
+      <el-card shadow="hover" class="record-card text-center cursor-pointer" @click="exportIssues">
         <el-icon :size="48" color="#f56c6c" class="mb-4"><Warning /></el-icon>
         <h3 class="text-lg font-bold mb-2">问题记录报表</h3>
         <p class="text-gray-500 text-sm mb-4">按项目分Sheet导出问题记录</p>
         <el-button type="danger" :icon="Download" :loading="exporting === 'issues'">导出 Excel</el-button>
       </el-card>
 
-      <el-card shadow="hover" class="text-center cursor-pointer" @click="exportTestCases">
+      <el-card shadow="hover" class="record-card text-center cursor-pointer" @click="exportTestCases">
         <el-icon :size="48" color="#409eff" class="mb-4"><Document /></el-icon>
         <h3 class="text-lg font-bold mb-2">测试用例报表</h3>
         <p class="text-gray-500 text-sm mb-4">导出所有测试用例为 Excel</p>
         <el-button type="primary" :icon="Download" :loading="exporting === 'cases'">导出 Excel</el-button>
       </el-card>
 
-      <el-card shadow="hover" class="text-center cursor-pointer" @click="exportAll">
+      <el-card shadow="hover" class="record-card text-center cursor-pointer" @click="exportAll">
         <el-icon :size="48" color="#67c23a" class="mb-4"><Files /></el-icon>
         <h3 class="text-lg font-bold mb-2">汇总报表</h3>
         <p class="text-gray-500 text-sm mb-4">问题+用例汇总导出</p>

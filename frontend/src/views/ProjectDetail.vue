@@ -7,7 +7,7 @@
     </el-page-header>
 
     <!-- 项目信息 -->
-    <el-card shadow="never" class="mb-4">
+    <el-card shadow="never" class="record-card mb-4">
       <el-descriptions :column="3" border>
         <el-descriptions-item label="项目名称">{{ project?.name }}</el-descriptions-item>
         <el-descriptions-item label="状态">
@@ -33,22 +33,14 @@
         </div>
       </template>
 
-      <el-table :data="files" v-loading="loading" stripe>
-        <el-table-column prop="filename" label="文件名" min-width="200" />
-        <el-table-column prop="file_type" label="类型" width="120" />
-        <el-table-column label="大小" width="120">
-          <template #default="{ row }">{{ formatSize(row.file_size) }}</template>
-        </el-table-column>
-        <el-table-column prop="uploaded_at" label="上传时间" width="180" />
-        <el-table-column label="操作" width="180" fixed="right">
-          <template #default="{ row }">
-            <el-button size="small" type="primary" :icon="Download" @click="downloadFile(row)">
-              下载
-            </el-button>
-            <el-button size="small" type="danger" :icon="Delete" @click="deleteFile(row)" />
-          </template>
-        </el-table-column>
-      </el-table>
+      <div v-loading="loading" class="card-grid">
+        <el-card v-for="row in files" :key="row.id" class="record-card" shadow="hover">
+          <div class="flex items-center gap-3 mb-3"><el-icon size="28" color="#409eff"><Document /></el-icon><div class="min-w-0"><div class="font-medium truncate">{{ row.filename }}</div><div class="text-xs text-gray-400">{{ row.file_type }} · {{ formatSize(row.file_size) }}</div></div></div>
+          <div class="text-xs text-gray-400 mb-3">{{ row.uploaded_at }}</div>
+          <div class="card-actions"><el-button size="small" type="primary" :icon="Download" @click="downloadFile(row)">下载</el-button><el-button size="small" type="danger" :icon="Delete" @click="deleteFile(row)">删除</el-button></div>
+        </el-card>
+      </div>
+      <el-empty v-if="!loading && !files.length" description="暂无文件" />
     </el-card>
   </div>
 </template>
@@ -56,7 +48,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { Upload, Download, Delete } from '@element-plus/icons-vue'
+import { Upload, Download, Delete, Document } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { projectApi, type Project, type ProjectFile } from '@/api/project'
 

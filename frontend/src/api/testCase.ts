@@ -15,7 +15,8 @@ export interface TestCase {
   steps: TestCaseStep[]
   priority: 'low' | 'medium' | 'high'
   status: 'draft' | 'active' | 'deprecated'
-  created_by: string
+  created_by: number | null
+  created_by_name: string
   created_at: string
   updated_at: string
 }

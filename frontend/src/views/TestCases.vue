@@ -25,33 +25,15 @@
       </el-form>
     </el-card>
 
-    <el-card shadow="never">
-      <el-table :data="testCases" v-loading="loading" stripe>
-        <el-table-column prop="title" label="用例标题" min-width="200" show-overflow-tooltip />
-        <el-table-column prop="priority" label="优先级" width="100">
-          <template #default="{ row }">
-            <el-tag :type="priorityType(row.priority)">{{ priorityLabel(row.priority) }}</el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="status" label="状态" width="100">
-          <template #default="{ row }">
-            <el-tag :type="statusType(row.status)">{{ statusLabel(row.status) }}</el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="步骤数" width="80">
-          <template #default="{ row }">{{ row.steps?.length || 0 }}</template>
-        </el-table-column>
-        <el-table-column prop="created_by" label="创建人" width="120" />
-        <el-table-column prop="created_at" label="创建时间" width="180" />
-        <el-table-column label="操作" width="180" fixed="right">
-          <template #default="{ row }">
-            <el-button size="small" @click="handleEdit(row)">编辑</el-button>
-            <el-button size="small" type="danger" @click="handleDelete(row)">删除</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-    </el-card>
-
+    <div v-loading="loading" class="card-grid">
+      <el-card v-for="row in testCases" :key="row.id" class="record-card" shadow="hover">
+        <div class="flex items-start justify-between gap-3 mb-3"><h3 class="font-semibold truncate">{{ row.title }}</h3><div class="flex gap-1"><el-tag :type="priorityType(row.priority)">{{ priorityLabel(row.priority) }}</el-tag><el-tag :type="statusType(row.status)">{{ statusLabel(row.status) }}</el-tag></div></div>
+        <div class="text-sm text-gray-500 line-clamp-2 mb-3">{{ row.description || '暂无描述' }}</div>
+        <div class="grid grid-cols-2 gap-2 text-xs text-gray-500 mb-4"><span>项目：{{ projects.find(p => p.id === row.project_id)?.name || '-' }}</span><span>步骤：{{ row.steps?.length || 0 }}</span><span>创建人：{{ row.created_by_name || row.created_by || '-' }}</span><span>{{ row.created_at }}</span></div>
+        <div class="card-actions"><el-button size="small" @click="handleEdit(row)">编辑</el-button><el-button size="small" type="danger" @click="handleDelete(row)">删除</el-button></div>
+      </el-card>
+    </div>
+    <el-empty v-if="!loading && !testCases.length" description="暂无测试用例" />
     <!-- 新建/编辑对话框 -->
     <el-dialog
       v-model="dialogVisible"
@@ -189,7 +171,7 @@ async function loadProjects() {
   projects.value = res.items || res
 }
 
-function priorityType(p: string) {
+function priorityType(p: string): any {
   const map: Record<string, string> = { low: 'info', medium: '', high: 'danger' }
   return map[p] || ''
 }
@@ -199,7 +181,7 @@ function priorityLabel(p: string) {
   return map[p] || p
 }
 
-function statusType(s: string) {
+function statusType(s: string): any {
   const map: Record<string, string> = { draft: 'info', active: 'success', deprecated: 'danger' }
   return map[s] || ''
 }
@@ -274,8 +256,8 @@ async function handleSubmit() {
         description: form.description,
         preconditions: form.preconditions,
         steps,
-        priority: form.priority,
-        status: form.status,
+        priority: form.priority as TestCase['priority'],
+        status: form.status as TestCase['status'],
       }
       if (isEdit.value && editingId.value) {
         await testCaseApi.update(editingId.value, payload)
