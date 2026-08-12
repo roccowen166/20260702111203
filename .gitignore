@@ -50,3 +50,6 @@ logs/
 # === 构建产物 ===
 build/
 *.spec
+
+# === 代码助手 ===
+.codebuddy/
